@@ -1,0 +1,673 @@
+<mule xmlns:scripting="http://www.mulesoft.org/schema/mule/scripting"
+	xmlns:idp-doctopdf-100="http://www.mulesoft.org/schema/mule/idp-doctopdf-100" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:email="http://www.mulesoft.org/schema/mule/email" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/email http://www.mulesoft.org/schema/mule/email/current/mule-email.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/idp-doctopdf-100 http://www.mulesoft.org/schema/mule/idp-doctopdf-100/current/mule-idp-doctopdf-100.xsd
+http://www.mulesoft.org/schema/mule/scripting http://www.mulesoft.org/schema/mule/scripting/current/mule-scripting.xsd">
+
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="72375866-e590-4559-92e3-9fd6e9720bb8" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<idp-doctopdf-100:config name="IDP___doctopdf___1_0_1_Config" doc:name="IDP - doctopdf - 1.0.0 Config" doc:id="9a1971f3-50a1-49b1-ba09-8256fb4a1c04" property_host="idp-rt.eu-central-1.eu1.anypoint.mulesoft.com" property_port="443" property_protocol="HTTPS" property_client-id="37a9f3f0e6cd439dbc7be1701d7cd28a" property_client-secret="93c1dF3832184c2Ab26bBFE90f930BaC" />
+	<configuration-properties doc:name="Configuration properties" doc:id="f1e56ee1-c691-40d9-b45a-06cd089b6f83" file="props/config.yaml" />
+	<flow name="doctopdf-apiFlow" doc:id="6d0845f7-2e28-4cbe-a154-d79d50fe58db" >
+		<scheduler doc:name="Scheduler" doc:id="3639143e-b8da-4df7-9c76-4845aa00d1d4" >
+			<scheduling-strategy >
+				<fixed-frequency frequency="5" timeUnit="MINUTES"/>
+			</scheduling-strategy>
+		</scheduler>
+		<http:request method="GET" doc:name="get token " doc:id="dc844440-c8a8-40ff-ae6a-fde7b2c45e73" url="https://login.microsoftonline.com/737562ab-cffa-4c36-91ee-cc1904f63628/oauth2/v2.0/token" sendBodyMode="ALWAYS">
+			<http:body ><![CDATA[#[output application/x-www-form-urlencoded ---
+{
+	'client_id' : '9b34a7d0-1c89-42fd-abf8-a942f3e73682',
+	'client_secret' :'.Ef8Q~qsPLKJsAt0zFpGE1H73usduP.oocsuscYf',
+	'scope':'https://graph.microsoft.com/.default',
+	'grant_type': 'client_credentials'
+}]]]></http:body>
+			<http:headers ><![CDATA[#[output application/java
+---
+{
+	"Content-Type" : "application/x-www-form-urlencoded
+"
+}]]]></http:headers>
+		</http:request>
+		<ee:transform doc:name="tokenJson" doc:id="7d5609dd-a191-4232-829c-d13db3440640" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="accesToken" ><![CDATA[%dw 2.0
+output application/json
+---
+payload.access_token]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<http:request method="GET" doc:name="get emails" doc:id="b8e0061c-5560-46a7-a656-f6b41f64626e" url="https://graph.microsoft.com/v1.0/users/salesforce@devonshireunderwriting.co.uk/messages?$select=id,subject,hasAttachments,isRead&amp;$filter=hasAttachments%20eq%20true%20and%20isRead%20eq%20false">
+			<http:headers ><![CDATA[#[output application/java
+---
+{
+	"Authorization" : "Bearer "++ vars.accesToken
+}]]]></http:headers>
+		</http:request>
+		<ee:transform doc:name="set response emails" doc:id="71e9236e-4a2f-4dcc-8d3e-b5a189270417" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="responseEmails" ><![CDATA[%dw 2.0
+output application/json
+---
+payload.value.id ]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<foreach doc:name="For Each email id" doc:id="30a490ec-dd20-4946-a12c-553d1f0b4370" collection="#[vars.responseEmails]">
+			<set-variable value="#[payload]" doc:name="emailId" doc:id="6edab17e-4fdb-424f-97dd-3daac3289fdf" variableName="emailId"/>
+			<http:request method="GET" doc:name="get email id and filter attchments" doc:id="1fda63d5-5a25-4c1f-acb0-9be5ddcf8b5c" url="https://graph.microsoft.com/v1.0/users/salesforce@devonshireunderwriting.co.uk/messages/{emailID}/attachments">
+				<http:headers ><![CDATA[#[output application/java
+---
+{
+	"Authorization" : "Bearer "++ vars.accesToken
+}]]]></http:headers>
+				<http:uri-params ><![CDATA[#[output application/java
+---
+{
+	"emailID" : vars.emailId
+}]]]></http:uri-params>
+			</http:request>
+			<ee:transform doc:name="filter doc files" doc:id="be89d04b-58ed-4a37-8d82-3cb14f35ba7e" >
+				<ee:message >
+				</ee:message>
+				<ee:variables >
+					<ee:set-variable variableName="filterdocx" ><![CDATA[%dw 2.0
+output application/json
+---
+(payload.value filter (item) -> 
+    ((item.name as String)[-5 to -1] == ".docx") or 
+    ((item.name as String)[-4 to -1] == ".doc")
+) map (item) -> {
+    id: item.id,
+    name: item.name,
+    contentType: item.contentType
+}]]></ee:set-variable>
+					<ee:set-variable variableName="emailfilterattchment" ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-variable>
+				</ee:variables>
+			</ee:transform>
+			<choice doc:name="does it has docx ?" doc:id="d8e681a5-78fa-4f70-ae96-4510a4fcaf64" >
+				<when expression="#[vars.filterdocx == []]">
+					<logger level="INFO" doc:name="Logger" doc:id="3b04dc7d-6444-45f1-8fb6-f2171a40ccf2" message="no doc founds"/>
+				</when>
+				<otherwise >
+					<ee:transform doc:name="docObject" doc:id="f8174233-b34d-47ab-854a-3f1a9a64d6b0">
+						<ee:message>
+						</ee:message>
+						<ee:variables >
+							<ee:set-variable variableName="docObject" ><![CDATA[%dw 2.0
+output application/json
+---
+vars.filterdocx map (item) -> {
+    id: item.id,
+    name : item.name
+    
+}]]></ee:set-variable>
+						</ee:variables>
+					</ee:transform>
+					<foreach doc:name="For Each doc id" doc:id="d4ec5111-ec0b-4ac8-9c49-ff95ccc75c8d" collection="#[vars.docObject]">
+				<set-variable value="#[payload.id]" doc:name="docId" doc:id="32829642-cd5e-4ea9-b521-0012423ff495" variableName="docId" />
+				<ee:transform doc:name="docName" doc:id="3b44b232-ab2b-4621-bdd4-a4a38c05eabe" >
+							<ee:message >
+							</ee:message>
+							<ee:variables >
+								<ee:set-variable variableName="pdfName" ><![CDATA[%dw 2.0
+output application/json
+---
+payload.name replace ".docx" with "" 
+]]></ee:set-variable>
+								<ee:set-variable variableName="docName" ><![CDATA[%dw 2.0
+output application/java
+import encodeURI from dw::core::URL
+---
+encodeURI(payload.name)]]></ee:set-variable>
+							</ee:variables>
+						</ee:transform>
+				<http:request method="GET" doc:name="get document in email" doc:id="53f7a31c-2381-4600-80b2-25b6161563d8" url="https://graph.microsoft.com/v1.0/users/salesforce@devonshireunderwriting.co.uk/messages/{emailID}/attachments/{docId}/$value">
+					<http:headers><![CDATA[#[output application/java
+---
+{
+	"Authorization" : "Bearer "++ vars.accesToken
+}]]]></http:headers>
+					<http:uri-params><![CDATA[#[output application/java
+---
+{
+	"docId" : vars.docId,
+	"emailID" : vars.emailId
+}]]]></http:uri-params>
+				</http:request>
+				<set-variable value="#[payload]" doc:name="docxFile" doc:id="9fcd8215-d707-4125-9e65-f362e08d238b" variableName="docxFile" mimeType="application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
+				<!-- [STUDIO:"Transform Message"]<ee:transform doc:name="Transform Message" doc:id="b3b54a38-b4c5-48f1-948d-dce4802f7eb7" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+&#45;&#45;-
+{
+}&#93;&#93;></ee:set-payload>
+					</ee:message>
+				</ee:transform> [STUDIO] -->
+				<http:request method="PUT" doc:name="save file into drive" doc:id="395217a5-44ff-4a0d-be80-cfe43b8d48a8" url="https://graph.microsoft.com/v1.0/users/salesforce@devonshireunderwriting.co.uk/drive/root:/Temp/{docName}.docx:/content">
+					<http:body><![CDATA[#[vars.docxFile]]]></http:body>
+					<http:headers><![CDATA[#[output application/java
+---
+{
+	"Authorization" : "Bearer "++ vars.accesToken
+}]]]></http:headers>
+					<http:uri-params><![CDATA[#[output application/java
+---
+{
+	"docName" : vars.docName
+}]]]></http:uri-params>
+				</http:request>
+				<set-variable value="#[payload.id]" doc:name="docinDriveID" doc:id="9c898d79-a513-424f-a20e-1258260d9cdd" variableName="docinDriveID" />
+						<try doc:name="Try" doc:id="2fa00645-c642-4f46-b5ed-0e9ec8d9b16e" >
+							<http:request method="GET" doc:name="get pdf from drive" doc:id="75cc546a-9df9-4fa8-8236-7506345731cf" url="https://graph.microsoft.com/v1.0/drives/b!mikJxMY3J0eAvBWOTbQkRfy2L3Z-Ru9Fs2zQhjMrRCOkDMX99wH1TomMMdDkW2v3/items/{docinDriveID}/content?format=pdf">
+					<http:headers><![CDATA[#[output application/java
+---
+{
+	"Authorization" : "Bearer "++ vars.accesToken
+}]]]></http:headers>
+					<http:uri-params><![CDATA[#[output application/java
+---
+{
+	"docinDriveID" : vars.docinDriveID
+}]]]></http:uri-params>
+				</http:request>
+							<error-handler >
+								<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="e0ea4551-e796-42c2-9bb0-186369987898" type="ANY" >
+									<set-variable value="#[true]" doc:name="Set Error Flag1" doc:id="8e74ca90-c79b-401c-bb32-acf07b9deef0" variableName="hasError1" />
+									<set-variable value="#[%dw 2.0&#10;output application/json&#10;---&#10;error.exception.localizedMessage default error.exception.message]" doc:name="errorlog1" doc:id="4bc37b76-c161-4e56-9e16-bde90c511a6d" variableName="errorlog1" />
+									<logger level="INFO" doc:name="Logger error" doc:id="124fff9e-0d5a-4888-922c-f917fd99e11e" message="#[vars.errorlog1]" />
+								</on-error-continue>
+							</error-handler>
+						</try>
+						<choice doc:name="Choice" doc:id="2d84f9e5-9063-4d61-91a3-a1bf90d5d405" >
+							<when expression="#[vars.hasError1 == true]">
+								<logger level="INFO" doc:name="Skip Iteration" doc:id="dfd0a266-f7e9-4054-a2cb-b949a6032f4b" message="#['Skipping doc: ' ++ vars.pdfName ++ ' due to error: ' ++ vars.errorlog1]" />
+								<remove-variable doc:name="Remove Variable hasError1" doc:id="ab58591f-1f09-444c-97d7-eb0f6c9c2bf1" variableName="hasError1"/>
+							</when>
+							<otherwise >
+								<ee:transform doc:name="pdfFile" doc:id="4f94f1c7-c46b-4616-811c-043feb4a4d99">
+							<ee:message>
+							</ee:message>
+							<ee:variables>
+								<ee:set-variable variableName="pdfFile"><![CDATA[%dw 2.0
+output multipart/form-data
+---
+{
+  parts: {
+    file: {
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": 'form-data; name="file"; filename="' ++ vars.pdfName ++ '.pdf"'
+      },
+      content: payload
+    }
+  }
+}]]></ee:set-variable>
+							</ee:variables>
+						</ee:transform>
+								<logger level="INFO" doc:name="Logger" doc:id="f8034493-2a64-43f5-ae8f-aa385de32db1" message="pdf pulled" />
+								<ee:transform doc:name="tokenBody" doc:id="6d147863-f2ff-4ef1-ba74-a510aedc3e09">
+							<ee:message>
+							</ee:message>
+							<ee:variables>
+								<ee:set-variable variableName="tokenBody"><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"grant_type":  p('microsoft.grant_type') ,
+ 	"client_id": p('microsoft.client_id')  ,
+ 	"client_secret": p('microsoft.client_secret') 
+}]]></ee:set-variable>
+							</ee:variables>
+						</ee:transform>
+								<http:request method="POST" doc:name="Request acces token idp" doc:id="d48d607e-769d-4070-bf64-36a5c9bd3a9f" url="https://eu1.anypoint.mulesoft.com/accounts/api/v2/oauth2/token">
+							<http:body><![CDATA[#[vars.tokenBody]]]></http:body>
+							<http:headers><![CDATA[#[{
+	"Content-Type" : "application/json"
+}]]]></http:headers>
+						</http:request>
+								<ee:transform doc:name="idpaccessToken" doc:id="89e85768-bd28-4e6f-90e7-3d1f39ddd274">
+							<ee:message>
+							</ee:message>
+							<ee:variables>
+								<ee:set-variable variableName="idpaccessToken"><![CDATA[%dw 2.0
+output application/json
+---
+payload.access_token]]></ee:set-variable>
+							</ee:variables>
+						</ee:transform>
+								<try doc:name="Try" doc:id="1d7b5a73-5428-4bfd-ab97-fe91dc137643">
+							<http:request method="POST" doc:name="postpdftoIDP" doc:id="701006e7-6481-4949-afdd-a8110680d226" url="https://idp-rt.eu-central-1.eu1.anypoint.mulesoft.com/api/v1/organizations/3407bf92-994a-491e-8681-867155b39e77/actions/e4b0c468-ef0b-4197-8577-c1065f2a557b/versions/1.2.0/executions">
+							<http:body><![CDATA[#[vars.pdfFile]]]></http:body>
+							<http:headers><![CDATA[#[{
+	"authorization" : "Bearer "++ vars.idpaccessToken
+	
+}]]]></http:headers>
+						</http:request>
+							<error-handler>
+								<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="6f17e8a5-39f8-4d76-ade3-d0215eecb9c3" type="ANY">
+									<set-variable value="#[true]" doc:name="Set Error Flag" doc:id="4a737451-c5ee-47ee-b6fc-90e129f81f2a" variableName="hasError" />
+									<set-variable value="#[%dw 2.0&#10;output application/json&#10;---&#10;error.exception.localizedMessage default error.exception.message]" doc:name="errorlog" doc:id="dd72022b-756c-4d3d-88c3-4fbbd0065be6" variableName="errorlog" />
+									<logger level="INFO" doc:name="Logger" doc:id="b1bb295c-bf7b-4ad0-8f49-2c14f7d632cc" message="#[error.errorMessage]" />
+								</on-error-continue>
+							</error-handler>
+						</try>
+								<choice doc:name="Choice" doc:id="db441173-b579-4d62-a9ca-ee26e5716730">
+							<when expression="#[vars.hasError == true]">
+								<logger level="INFO" doc:name="Skip Iteration" doc:id="ab58baad-3433-4d04-91c5-a4ce3fae5924" message="#['Skipping doc: ' ++ vars.pdfName ++ ' due to error: ' ++ vars.errorlog]" />
+										<remove-variable doc:name="Remove Variable hasError" doc:id="3f50b5ed-f649-4331-bcfb-7dd4dc25b96f" variableName="hasError"/>
+							</when>
+									<otherwise>
+								<set-variable value="#[payload.id]" doc:name="executionID" doc:id="bfe0f63d-d887-4381-85df-2cdc17151468" variableName="executionID" />
+								<flow-ref doc:name="get-idp-flow" doc:id="41df7f19-0e91-4a2a-a4cb-3e2f40ec7a05" name="get-idp-flow" />
+								<try doc:name="Try" doc:id="de6bdd7c-d9fa-4138-8958-50499a10833b">
+											<http:request method="PATCH" doc:name="email is read =true" doc:id="6bff94db-dad3-48ca-af47-9a623208f727" url="https://graph.microsoft.com/v1.0/users/salesforce@devonshireunderwriting.co.uk/messages/{emailId}">
+												<http:body><![CDATA[#[output application/json
+---
+{
+  "isRead": true
+}]]]></http:body>
+												<http:headers><![CDATA[#[output application/java
+---
+{
+	"Authorization" : "Bearer "++ vars.accesToken,
+	"Content-Type": "application/json"
+}]]]></http:headers>
+												<http:uri-params><![CDATA[#[output application/java
+---
+{
+	"emailId" : vars.emailId
+}]]]></http:uri-params>
+											</http:request>
+											<logger level="INFO" doc:name="email log" doc:id="c73afdd2-5589-40c7-9656-bc8368e3f673" message="email is read id: #[vars.emailId]"/>
+											<error-handler>
+												<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="824bec60-18b1-4016-8b5f-5976639f4896" type="HTTP:BAD_REQUEST">
+													<set-variable value="#[true]" doc:name="Set Error Flag" doc:id="bcd806c9-9ce9-4d85-87c6-d69ad980c15e" variableName="hasError3" />
+													<set-variable value="#[%dw 2.0&#10;output application/json&#10;---&#10;error.exception.localizedMessage default error.exception.message]" doc:name="errorlog" doc:id="ca935d25-0db2-4727-ba28-a28ac2aa47a4" variableName="errorlog3" />
+													<logger level="INFO" doc:name="Logger" doc:id="899684de-c482-4ab7-a818-c0122cabddf5" message="#[error.errorMessage]" />
+												</on-error-continue>
+											</error-handler>
+										</try>
+										<http:request method="POST" doc:name="post to salesforce-app" doc:id="bffa9ccc-80e9-43e0-b80f-554e5c197318" url="https://salesforce-app-jz0cco.2ky31l-2.deu-c1.eu1.cloudhub.io/api/accounts">
+							<http:body><![CDATA[#[vars.responseIDP]]]></http:body>
+											<http:headers ><![CDATA[#[{
+	"Content-Type" : "application/json"
+}]]]></http:headers>
+						</http:request>
+								<logger level="INFO" doc:name="Logger" doc:id="cbecb084-849b-44a1-a077-0ad13baf57e2" message="#[payload]" />
+							</otherwise>
+						</choice>
+							</otherwise>
+						</choice>
+			</foreach>
+				</otherwise>
+			</choice>
+			<try doc:name="Try" doc:id="e0f11e58-1b3c-473b-8d6c-adbdbfc21675" >
+				<http:request method="PATCH" doc:name="email is read =true" doc:id="c8fa6ad7-05b5-4fb6-93d1-38028ec3ddf1" url="https://graph.microsoft.com/v1.0/users/salesforce@devonshireunderwriting.co.uk/messages/{emailId}">
+				<http:body><![CDATA[#[output application/json
+---
+{
+  "isRead": true
+}]]]></http:body>
+				<http:headers><![CDATA[#[output application/java
+---
+{
+	"Authorization" : "Bearer "++ vars.accesToken,
+	"Content-Type": "application/json"
+}]]]></http:headers>
+				<http:uri-params><![CDATA[#[output application/java
+---
+{
+	"emailId" : vars.emailId
+}]]]></http:uri-params>
+			</http:request>
+				<error-handler >
+					<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="3a225c45-9ca4-4b68-8951-936b7b6358ee" type="HTTP:BAD_REQUEST" >
+						<set-variable value="#[true]" doc:name="Set Error Flag3" doc:id="7b90561a-73cd-434a-9798-84715394aca9" variableName="hasError3" />
+						<set-variable value="#[%dw 2.0&#10;output application/json&#10;---&#10;error.exception.localizedMessage default error.exception.message]" doc:name="errorlog3" doc:id="006b67cc-f8d1-408b-83af-09690217127c" variableName="errorlog3" />
+						<logger level="INFO" doc:name="Logger" doc:id="1ab0b649-c538-4538-8855-6d83f954b6b6" message="#[error.errorMessage]" />
+					</on-error-continue>
+				</error-handler>
+			</try>
+			<choice doc:name="Choice" doc:id="d8c4d660-804b-41d7-8af0-66cd42f120a1" >
+				<when expression="#[vars.hasError3 == true]">
+					<logger level="INFO" doc:name="Skip Iteration" doc:id="bc445000-0df9-4aee-8708-f2ee6a9d94d8" message="#['Skipping doc: ' ++ vars.pdfName ++ ' due to error: ' ++ vars.errorlog3]" />
+					<remove-variable doc:name="Remove Variable hasError" doc:id="10366d53-e79f-4ef2-bf9c-d300bcd7a2c5" variableName="hasError3" />
+				</when>
+				<otherwise >
+					<logger level="INFO" doc:name="email Info" doc:id="c08b32dc-ffb3-4e26-92f0-ee50033a3bc7" message="marke email as read = true" />
+				</otherwise>
+			</choice>
+		</foreach>
+	</flow>
+	<sub-flow name="get-idp-flow" doc:id="f929217d-24da-43bf-85dd-7be037904b23" >
+		<http:request method="GET" doc:name="get field idp by executionID" doc:id="476e39d7-0312-4ef3-bbbb-1d3b729e9ff9" url="https://idp-rt.eu-central-1.eu1.anypoint.mulesoft.com/api/v1/organizations/3407bf92-994a-491e-8681-867155b39e77/actions/e4b0c468-ef0b-4197-8577-c1065f2a557b/versions/1.2.0/executions/{executionId}" >
+			<http:headers ><![CDATA[#[{
+	"authorization" : "Bearer "++ vars.idpaccessToken
+}]]]></http:headers>
+			<http:uri-params ><![CDATA[#[output application/java
+---
+{
+	"executionId" : vars.executionID
+}]]]></http:uri-params>
+		</http:request>
+		<choice doc:name="Choice" doc:id="c67acf22-d218-4947-a3af-d65291606898" >
+			<when expression='#[["IN_PROGRESS", "ACKNOWLEDGED", "RESULTS_PENDING"] contains payload.status]'>
+				<scripting:execute engine="groovy" doc:name="Execute" doc:id="5fe1d679-d11f-4f1d-bdda-f73f1dcbd79f">
+					<scripting:code><![CDATA[Thread.sleep(5000)
+return payload]]></scripting:code>
+				</scripting:execute>
+				<flow-ref doc:name="get-idp-flow (recursive)" doc:id="e38658a8-3840-488c-b2df-6f4893a2ad7a" name="get-idp-flow"/>
+			</when>
+			<otherwise >
+				<logger level="INFO" doc:name="Logger" doc:id="7b6e9a07-c685-4f9c-9f07-c892d90c09e1" message="#[payload]" />
+				<ee:transform doc:name="responseIDP" doc:id="55709a15-eddf-4c6f-8650-74b5b882b43e" >
+					<ee:message />
+					<ee:variables >
+						<ee:set-variable variableName="responseIDP" ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-variable>
+					</ee:variables>
+				</ee:transform>
+			</otherwise>
+		</choice>
+	</sub-flow>
+	<flow name="pdf-flow" doc:id="40e6acdd-f106-4242-a772-fb7f4136e441" >
+		<scheduler doc:name="Scheduler" doc:id="8f16ff3d-4ef3-4556-8450-aac3a134ce78" >
+			<scheduling-strategy >
+				<fixed-frequency frequency="7" timeUnit="MINUTES" startDelay="2"/>
+			</scheduling-strategy>
+		</scheduler>
+		<logger level="INFO" doc:name="Logger" doc:id="58c2a31c-1eca-4e4a-8e84-fe373f63efde" />
+		<http:request method="GET" doc:name="get token " doc:id="303961a1-daea-497a-9436-b02ec4602cb2" url="https://login.microsoftonline.com/737562ab-cffa-4c36-91ee-cc1904f63628/oauth2/v2.0/token" sendBodyMode="ALWAYS" >
+			<http:body ><![CDATA[#[output application/x-www-form-urlencoded ---
+{
+	'client_id' : '9b34a7d0-1c89-42fd-abf8-a942f3e73682',
+	'client_secret' :'.Ef8Q~qsPLKJsAt0zFpGE1H73usduP.oocsuscYf',
+	'scope':'https://graph.microsoft.com/.default',
+	'grant_type': 'client_credentials'
+}]]]></http:body>
+			<http:headers ><![CDATA[#[output application/java
+---
+{
+	"Content-Type" : "application/x-www-form-urlencoded
+"
+}]]]></http:headers>
+		</http:request>
+		<ee:transform doc:name="tokenJson" doc:id="313ac85c-454e-4828-911a-94f3391ba1ea" >
+			<ee:message />
+			<ee:variables >
+				<ee:set-variable variableName="accesToken" ><![CDATA[%dw 2.0
+output application/json
+---
+payload.access_token]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<http:request method="GET" doc:name="get emails" doc:id="0fb9e1f6-ba30-49ad-ada8-c62c22bf1de9" url="https://graph.microsoft.com/v1.0/users/salesforce@devonshireunderwriting.co.uk/messages?$select=id,subject,hasAttachments,isRead&amp;$filter=hasAttachments%20eq%20true%20and%20isRead%20eq%20false" >
+			<http:headers ><![CDATA[#[output application/java
+---
+{
+	"Authorization" : "Bearer "++ vars.accesToken
+}]]]></http:headers>
+		</http:request>
+		<ee:transform doc:name="set response emails" doc:id="817b5f54-93f0-4f0f-8db9-9ba2d5c17183" >
+			<ee:message />
+			<ee:variables >
+				<ee:set-variable variableName="responseEmails" ><![CDATA[%dw 2.0
+output application/json
+---
+payload.value.id ]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<foreach doc:name="For Each email id" doc:id="9f1b28ad-e15a-48b6-b909-e2c5c5b15321" collection="#[vars.responseEmails]">
+			<set-variable value="#[payload]" doc:name="emailId" doc:id="2e99b7c4-3c3c-4d05-afa9-da280ae9bdfd" variableName="emailId" />
+			<http:request method="GET" doc:name="get email id and filter attchments" doc:id="7c499b4b-0fa4-4ce1-b5b4-f84085b072e8" url="https://graph.microsoft.com/v1.0/users/salesforce@devonshireunderwriting.co.uk/messages/{emailID}/attachments?$select=id,name,contentType" >
+				<http:headers ><![CDATA[#[output application/java
+---
+{
+	"Authorization" : "Bearer "++ vars.accesToken
+}]]]></http:headers>
+				<http:uri-params ><![CDATA[#[output application/java
+---
+{
+	"emailID" : vars.emailId
+}]]]></http:uri-params>
+			</http:request>
+			<ee:transform doc:name="filter pdf files" doc:id="406a1ddd-6cc6-4f7e-b37f-7bf1ac57b62e" >
+				<ee:message />
+				<ee:variables >
+					<ee:set-variable variableName="emailfilterattchment" ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-variable>
+					<ee:set-variable variableName="filterpdf" ><![CDATA[%dw 2.0
+output application/json
+---
+(payload.value filter (item) ->  
+    ((item.name as String)[-4 to -1] == ".pdf")
+) map (item) -> {
+    id: item.id,
+    name: item.name,
+    contentType: item.contentType
+}]]></ee:set-variable>
+				</ee:variables>
+			</ee:transform>
+			<choice doc:name="does it has pdf ?" doc:id="adeeef34-2b2f-481d-9891-36c0cb58ec58" >
+				<when expression="#[vars.filterpdf == []]">
+					<logger level="INFO" doc:name="Logger" doc:id="337961f5-2c32-4749-8ed0-502aede2f48b" message="no pdf founds"/>
+				</when>
+				<otherwise >
+					<ee:transform doc:name="docObject" doc:id="eff6072a-09bd-49b8-a73f-e0052702a227" >
+						<ee:message />
+						<ee:variables >
+							<ee:set-variable variableName="pdfObject" ><![CDATA[%dw 2.0
+output application/json
+---
+vars.filterpdf map (item) -> {
+    id: item.id,
+    name : item.name
+    
+}]]></ee:set-variable>
+						</ee:variables>
+					</ee:transform>
+					<foreach doc:name="For Each pdf" doc:id="f8868b12-173b-46cd-be43-009b3dcedd28" collection="#[vars.pdfObject]">
+						<set-variable value="#[payload.id]" doc:name="pdfId" doc:id="b8943751-557b-475b-a23b-69ead353917b" variableName="pdfId" />
+						<ee:transform doc:name="docName" doc:id="fb6aca88-7aea-44d0-a46b-0a2169ec4f33" >
+							<ee:message />
+							<ee:variables >
+								<ee:set-variable variableName="pdfName" ><![CDATA[%dw 2.0
+output application/json
+---
+payload.name
+]]></ee:set-variable>
+								<ee:set-variable variableName="docName" ><![CDATA[%dw 2.0
+output application/java
+import encodeURI from dw::core::URL
+---
+encodeURI(payload.name)]]></ee:set-variable>
+							</ee:variables>
+						</ee:transform>
+						<http:request method="GET" doc:name="get document in email" doc:id="735bf8db-5849-496a-9dff-f19179446571" url="https://graph.microsoft.com/v1.0/users/salesforce@devonshireunderwriting.co.uk/messages/{emailID}/attachments/{docId}/$value" >
+							<http:headers ><![CDATA[#[output application/java
+---
+{
+	"Authorization" : "Bearer "++ vars.accesToken
+}]]]></http:headers>
+							<http:uri-params ><![CDATA[#[output application/java
+---
+{
+	"docId" : vars.pdfId ,
+	"emailID" : vars.emailId
+}]]]></http:uri-params>
+						</http:request>
+						<!-- [STUDIO:"pdfFile"]<set-variable value="#[payload&#93;" doc:name="pdfFile" doc:id="24855419-53f5-4781-a2ae-a0e2c3191760" variableName="pdfFile" mimeType="application/vnd.openxmlformats-officedocument.wordprocessingml.document" /> [STUDIO] -->
+						<ee:transform doc:name="pdfFileOrg" doc:id="9c322b77-f535-43d7-8969-76154e7e9af4" >
+							<ee:message />
+							<ee:variables >
+								<ee:set-variable variableName="pdfFileOrg" ><![CDATA[%dw 2.0
+output multipart/form-data
+---
+{
+  parts: {
+    file: {
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": 'form-data; name="file"; filename="' ++ vars.docName
+      },
+      content: payload
+    }
+  }
+}]]></ee:set-variable>
+							</ee:variables>
+						</ee:transform>
+						<ee:transform doc:name="tokenBody" doc:id="b12e19cd-76df-4359-97db-a75b266a1c8c" >
+							<ee:message />
+							<ee:variables >
+								<ee:set-variable variableName="tokenBody" ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"grant_type":  p('microsoft.grant_type') ,
+ 	"client_id": p('microsoft.client_id')  ,
+ 	"client_secret": p('microsoft.client_secret') 
+}]]></ee:set-variable>
+							</ee:variables>
+						</ee:transform>
+						<http:request method="POST" doc:name="Request acces token idp" doc:id="d2d92449-1472-43d3-acc7-e712c9decda5" url="https://eu1.anypoint.mulesoft.com/accounts/api/v2/oauth2/token" >
+							<http:body ><![CDATA[#[vars.tokenBody]]]></http:body>
+							<http:headers ><![CDATA[#[{
+	"Content-Type" : "application/json"
+}]]]></http:headers>
+						</http:request>
+						<ee:transform doc:name="idpaccessToken" doc:id="88fcf39c-111a-42ee-b3c0-c716446d1448" >
+							<ee:message />
+							<ee:variables >
+								<ee:set-variable variableName="idpaccessToken" ><![CDATA[%dw 2.0
+output application/json
+---
+payload.access_token]]></ee:set-variable>
+							</ee:variables>
+						</ee:transform>
+						<try doc:name="Try" doc:id="8536cb15-ae88-46e9-a326-f7c386e06764" >
+							<http:request method="POST" doc:name="postpdf-extracttoIDP" doc:id="1947c552-3c21-4dc8-ae11-7e77b47d2a16" url="https://idp-rt.eu-central-1.eu1.anypoint.mulesoft.com/api/v1/organizations/3407bf92-994a-491e-8681-867155b39e77/actions/3c1c2d46-7b56-499e-9f9d-25d688908f6c/versions/1.0.0/executions" >
+								<http:body ><![CDATA[#[vars.pdfFileOrg]]]></http:body>
+								<http:headers ><![CDATA[#[{
+	"authorization" : "Bearer "++ vars.idpaccessToken
+	
+}]]]></http:headers>
+							</http:request>
+							<error-handler >
+								<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="28d20259-1fe5-42e5-a219-b4c7d3599569" type="ANY" >
+									<set-variable value="#[true]" doc:name="Set Errorflow Flag" doc:id="ec0bb536-f9db-4d53-a6bb-90586fe30f54" variableName="hasErrorflow" />
+									<set-variable value="#[%dw 2.0&#10;output application/json&#10;---&#10;error.exception.localizedMessage default error.exception.message]" doc:name="errorlog" doc:id="401c0434-f6d0-453a-967c-85713d9977b0" variableName="errorlog" />
+									<logger level="INFO" doc:name="Logger" doc:id="5d2932de-3958-4fd4-91db-df37f08b7f16" message="#[error.errorMessage]" />
+								</on-error-continue>
+							</error-handler>
+						</try>
+						<choice doc:name="Choice" doc:id="65530d3f-aa4b-4e4c-8454-fe6f07cf92e9" >
+							<when expression="#[vars.hasErrorflow == true]" >
+								<logger level="INFO" doc:name="Skip Iteration" doc:id="790d60a0-cfd0-4301-8cdc-aabeaec357bf" message="#['Skipping doc: ' ++ vars.pdfName ++ ' due to error: ' ++ vars.errorlog]" />
+								<remove-variable doc:name="Remove Variable hasError" doc:id="11150be3-cffc-4016-8590-f41c464c8994" variableName="hasErrorflow" />
+							</when>
+							<otherwise >
+								<set-variable value="#[payload.id]" doc:name="executionID" doc:id="a1947ab1-6399-4931-94c1-94dba19ff047" variableName="executionID" />
+								<flow-ref doc:name="doc-extract" doc:id="d33d1be9-5d45-414e-b2b0-ef83fd8dcce8" name="doc-extract" />
+								<try doc:name="Try" doc:id="c3aa131e-5f26-460d-98fc-6064631d2f7e" >
+									<http:request method="PATCH" doc:name="email is read =true" doc:id="fde9bcb7-9628-45ca-8b09-af884a457686" url="https://graph.microsoft.com/v1.0/users/salesforce@devonshireunderwriting.co.uk/messages/{emailId}" >
+										<http:body ><![CDATA[#[output application/json
+---
+{
+  "isRead": true
+}]]]></http:body>
+										<http:headers ><![CDATA[#[output application/java
+---
+{
+	"Authorization" : "Bearer "++ vars.accesToken,
+	"Content-Type": "application/json"
+}]]]></http:headers>
+										<http:uri-params ><![CDATA[#[output application/java
+---
+{
+	"emailId" : vars.emailId
+}]]]></http:uri-params>
+									</http:request>
+									<logger level="INFO" doc:name="email log" doc:id="314550bc-9068-4a36-afe4-c732644d48f0" message="email is read id: #[vars.emailId]" />
+									<error-handler >
+										<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="6e21ad02-e6d0-4e1a-b183-dc37762e1c27" type="ANY" >
+											<set-variable value="#[true]" doc:name="Set Error Flag" doc:id="1b83819a-c841-4115-b956-bdf3e95dacdd" variableName="hasError4" />
+											<set-variable value="#[%dw 2.0&#10;output application/json&#10;---&#10;error.exception.localizedMessage default error.exception.message]" doc:name="errorlog" doc:id="df23dd70-e24f-4f90-882d-c5591f6d9bdf" variableName="errorlog4" />
+											<logger level="INFO" doc:name="Logger" doc:id="36f19624-83b5-4b3e-a1f2-aa95b6648b4b" message="#[error.errorMessage]" />
+										</on-error-continue>
+									</error-handler>
+								</try>
+								<choice doc:name="Choice" doc:id="e81d2fb0-ac00-47f6-986f-3a093c0c543d">
+									<when expression="#[vars.hasError4 == true]">
+										<logger level="INFO" doc:name="Skip Iteration" doc:id="ef457555-f841-4fb1-b77a-25748385a58d" message="#['Skipping doc: ' ++ vars.pdfName ++ ' due to error: ' ++ vars.errorlog3]" />
+										<remove-variable doc:name="Remove Variable hasError" doc:id="de34b325-65b7-4aff-9acc-8dc912fe161d" variableName="hasError4" />
+									</when>
+									<otherwise>
+										<logger level="INFO" doc:name="email Info" doc:id="f804cd64-5d08-47ff-a059-a9d5f18da894" message="marke email as read = true" />
+										<http:request method="POST" doc:name="post to salesforce-app" doc:id="789768a9-b1b6-481b-ae71-dab735f1a590" url="https://salesforce-app-jz0cco.2ky31l-2.deu-c1.eu1.cloudhub.io/api/accounts">
+									<http:body><![CDATA[#[vars.responseIDP]]]></http:body>
+									<http:headers><![CDATA[#[{
+	"Content-Type" : "application/json"
+}]]]></http:headers>
+								</http:request>
+										<logger level="INFO" doc:name="Logger" doc:id="21399351-557e-48e1-8b3e-e051f8ef5c6f" message="#[payload]" />
+									</otherwise>
+								</choice>
+							</otherwise>
+						</choice>
+					</foreach>
+				</otherwise>
+			</choice>
+		</foreach>
+	</flow>
+	<sub-flow name="doc-extract" doc:id="3096c4b1-aa56-4e68-a7f0-cadc57aec780" >
+		<http:request method="GET" doc:name="get field idp by executionID" doc:id="68533f67-ba08-4a62-bdc1-8edb95fb978a" url="https://idp-rt.eu-central-1.eu1.anypoint.mulesoft.com/api/v1/organizations/3407bf92-994a-491e-8681-867155b39e77/actions/3c1c2d46-7b56-499e-9f9d-25d688908f6c/versions/1.0.0/executions/{executionId}" >
+			<http:headers ><![CDATA[#[{
+	"authorization" : "Bearer "++ vars.idpaccessToken
+}]]]></http:headers>
+			<http:uri-params ><![CDATA[#[output application/java
+---
+{
+	"executionId" : vars.executionID
+}]]]></http:uri-params>
+		</http:request>
+		<choice doc:name="Choice" doc:id="5d8bb328-746a-4720-8c5b-f58fd0796c70" >
+			<when expression='#[["IN_PROGRESS", "ACKNOWLEDGED", "RESULTS_PENDING"] contains payload.status]' >
+				<scripting:execute engine="groovy" doc:name="Execute" doc:id="ac1952a7-ea71-4fcb-94af-1b8199323eda" >
+					<scripting:code ><![CDATA[Thread.sleep(5000)
+return payload]]></scripting:code>
+				</scripting:execute>
+				<flow-ref doc:name="doc-extract (recursive)" doc:id="4604e6ca-40b4-4865-9f77-cf98e4a064fe" name="doc-extract" />
+			</when>
+			<otherwise >
+				<logger level="INFO" doc:name="Logger" doc:id="3cd056ae-1f03-4cd0-9b71-23f108ea3720" message="#[payload]" />
+				<ee:transform doc:name="responseIDP" doc:id="ec4da16f-1b97-4bde-90ec-40da1aa4d9c6" >
+					<ee:message />
+					<ee:variables >
+						<ee:set-variable variableName="responseIDP" ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-variable>
+					</ee:variables>
+				</ee:transform>
+			</otherwise>
+		</choice>
+	</sub-flow>
+
+</mule>

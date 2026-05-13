@@ -1,0 +1,4 @@
+%dw 2.0
+
+type auto_f929217d_24da_43bf_85dd_7be037904b23_Input_Variables_pdfName <X> = X
+
