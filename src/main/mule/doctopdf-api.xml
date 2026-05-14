@@ -13,12 +13,7 @@ http://www.mulesoft.org/schema/mule/scripting http://www.mulesoft.org/schema/mul
 	</http:listener-config>
 	<idp-doctopdf-100:config name="IDP___doctopdf___1_0_1_Config" doc:name="IDP - doctopdf - 1.0.0 Config" doc:id="9a1971f3-50a1-49b1-ba09-8256fb4a1c04" property_host="idp-rt.eu-central-1.eu1.anypoint.mulesoft.com" property_port="443" property_protocol="HTTPS" property_client-id="37a9f3f0e6cd439dbc7be1701d7cd28a" property_client-secret="93c1dF3832184c2Ab26bBFE90f930BaC" />
 	<configuration-properties doc:name="Configuration properties" doc:id="f1e56ee1-c691-40d9-b45a-06cd089b6f83" file="props/config.yaml" />
-	<flow name="doctopdf-apiFlow" doc:id="6d0845f7-2e28-4cbe-a154-d79d50fe58db" >
-		<scheduler doc:name="Scheduler" doc:id="3639143e-b8da-4df7-9c76-4845aa00d1d4" >
-			<scheduling-strategy >
-				<fixed-frequency frequency="5" timeUnit="MINUTES"/>
-			</scheduling-strategy>
-		</scheduler>
+	<sub-flow name="doctopdf-apiFlow" doc:id="6d0845f7-2e28-4cbe-a154-d79d50fe58db" >
 		<http:request method="GET" doc:name="get token " doc:id="dc844440-c8a8-40ff-ae6a-fde7b2c45e73" url="https://login.microsoftonline.com/737562ab-cffa-4c36-91ee-cc1904f63628/oauth2/v2.0/token" sendBodyMode="ALWAYS">
 			<http:body ><![CDATA[#[output application/x-www-form-urlencoded ---
 {
@@ -351,7 +346,7 @@ payload.access_token]]></ee:set-variable>
 				</otherwise>
 			</choice>
 		</foreach>
-	</flow>
+	</sub-flow>
 	<sub-flow name="get-idp-flow" doc:id="f929217d-24da-43bf-85dd-7be037904b23" >
 		<http:request method="GET" doc:name="get field idp by executionID" doc:id="476e39d7-0312-4ef3-bbbb-1d3b729e9ff9" url="https://idp-rt.eu-central-1.eu1.anypoint.mulesoft.com/api/v1/organizations/3407bf92-994a-491e-8681-867155b39e77/actions/e4b0c468-ef0b-4197-8577-c1065f2a557b/versions/1.2.0/executions/{executionId}" >
 			<http:headers ><![CDATA[#[{
@@ -385,12 +380,7 @@ payload]]></ee:set-variable>
 			</otherwise>
 		</choice>
 	</sub-flow>
-	<flow name="pdf-flow" doc:id="40e6acdd-f106-4242-a772-fb7f4136e441" >
-		<scheduler doc:name="Scheduler" doc:id="8f16ff3d-4ef3-4556-8450-aac3a134ce78" >
-			<scheduling-strategy >
-				<fixed-frequency frequency="7" timeUnit="MINUTES" startDelay="2"/>
-			</scheduling-strategy>
-		</scheduler>
+	<sub-flow name="pdf-flow" doc:id="40e6acdd-f106-4242-a772-fb7f4136e441" >
 		<logger level="INFO" doc:name="Logger" doc:id="58c2a31c-1eca-4e4a-8e84-fe373f63efde" />
 		<http:request method="GET" doc:name="get token " doc:id="303961a1-daea-497a-9436-b02ec4602cb2" url="https://login.microsoftonline.com/737562ab-cffa-4c36-91ee-cc1904f63628/oauth2/v2.0/token" sendBodyMode="ALWAYS" >
 			<http:body ><![CDATA[#[output application/x-www-form-urlencoded ---
@@ -635,7 +625,7 @@ payload.access_token]]></ee:set-variable>
 				</otherwise>
 			</choice>
 		</foreach>
-	</flow>
+	</sub-flow>
 	<sub-flow name="doc-extract" doc:id="3096c4b1-aa56-4e68-a7f0-cadc57aec780" >
 		<http:request method="GET" doc:name="get field idp by executionID" doc:id="68533f67-ba08-4a62-bdc1-8edb95fb978a" url="https://idp-rt.eu-central-1.eu1.anypoint.mulesoft.com/api/v1/organizations/3407bf92-994a-491e-8681-867155b39e77/actions/3c1c2d46-7b56-499e-9f9d-25d688908f6c/versions/1.0.0/executions/{executionId}" >
 			<http:headers ><![CDATA[#[{
@@ -669,5 +659,21 @@ payload]]></ee:set-variable>
 			</otherwise>
 		</choice>
 	</sub-flow>
+	<flow name="scheduler" doc:id="9fc72da4-725d-4276-8d92-c153471f61b9" >
+		<scheduler doc:name="Scheduler" doc:id="ce3deecc-19a3-4286-a1c0-0a752389436e" >
+			<scheduling-strategy >
+				<fixed-frequency frequency="1" timeUnit="MINUTES"/>
+			</scheduling-strategy>
+		</scheduler>
+		<round-robin doc:name="Round Robin" doc:id="2aca36ee-a4e5-4180-9064-093f24eb0a98" >
+			<route >
+				<flow-ref doc:name="doctopdf-apiFlow" doc:id="6042c221-93f9-4307-a300-82a20573118f" name="doctopdf-apiFlow"/>
+			</route>
+			<route >
+				<flow-ref doc:name="pdf-flow" doc:id="e4569bff-129f-4336-8d29-cc81f43b29e3" name="pdf-flow"/>
+			</route>
+		</round-robin>
+		<error-handler ref="error-handling-app" />
+	</flow>
 
 </mule>
