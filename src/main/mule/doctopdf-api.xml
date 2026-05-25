@@ -60,7 +60,7 @@ output application/java
 (now() as Date {format: "yyyy-MM-dd"} as String) ++ "T00:00:00Z"]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
-		<http:request method="GET" doc:name="get emails" doc:id="b8e0061c-5560-46a7-a656-f6b41f64626e" url="#['https://graph.microsoft.com/v1.0/users/salesforce@devonshireunderwriting.co.uk/messages?%24select=id%2Csubject%2ChasAttachments%2CisRead%2CtoRecipients%2CreceivedDateTime&amp;%24filter=hasAttachments%20eq%20true%20and%20isRead%20eq%20false%20and%20receivedDateTime%20ge%20' ++ vars.todayFilter]">
+		<http:request method="GET" doc:name="get emails" doc:id="b8e0061c-5560-46a7-a656-f6b41f64626e" url="#['https://graph.microsoft.com/v1.0/users/salesforce@devonshireunderwriting.co.uk/messages?%24select=id%2Csubject%2ChasAttachments%2CisRead%2CtoRecipients%2CreceivedDateTime&amp;%24filter=hasAttachments%20eq%20true%20and%20isRead%20eq%20false%20and%20receivedDateTime%20ge%20' ++ vars.todayFilter ++ '&amp;%24top=50']">
 			<http:headers ><![CDATA[#[output application/java
 ---
 {
@@ -323,60 +323,25 @@ payload.access_token]]></ee:set-variable>
 								</on-error-continue>
 							</error-handler>
 						</try>
-								<set-variable value="#[payload.id]" doc:name="executionID" doc:id="173b9c35-3835-4d37-85c3-692b7adaaf97" variableName="executionID" />
-								<!-- [STUDIO:"Choice"]<choice doc:name="Choice" doc:id="db441173-b579-4d62-a9ca-ee26e5716730">
-							<when expression="#[vars.hasError == true&#93;">
-								<logger level="INFO" doc:name="Skip Iteration" doc:id="ab58baad-3433-4d04-91c5-a4ce3fae5924" message="#['Skipping doc: ' ++ vars.pdfName ++ ' due to error: ' ++ vars.errorlog&#93;" />
+								<choice doc:name="Choice" doc:id="db441173-b579-4d62-a9ca-ee26e5716730">
+							<when expression="#[vars.hasError == true]">
+								<logger level="INFO" doc:name="Skip Iteration" doc:id="ab58baad-3433-4d04-91c5-a4ce3fae5924" message="#['Skipping doc: ' ++ vars.pdfName ++ ' due to error: ' ++ vars.errorlog]" />
 										<remove-variable doc:name="Remove Variable hasError" doc:id="3f50b5ed-f649-4331-bcfb-7dd4dc25b96f" variableName="hasError"/>
 							</when>
 									<otherwise>
-								<set-variable value="#[payload.id&#93;" doc:name="executionID" doc:id="bfe0f63d-d887-4381-85df-2cdc17151468" variableName="executionID" />
-								<flow-ref doc:name="get-idp-flow" doc:id="41df7f19-0e91-4a2a-a4cb-3e2f40ec7a05" name="get-idp-flow" />
-								<try doc:name="Try" doc:id="de6bdd7c-d9fa-4138-8958-50499a10833b">
-											<http:request method="PATCH" doc:name="email is read =true" doc:id="6bff94db-dad3-48ca-af47-9a623208f727" url="https://graph.microsoft.com/v1.0/users/salesforce@devonshireunderwriting.co.uk/messages/{emailId}">
-												<http:body><![CDATA[#[output application/json
-&#45;&#45;-
-{
-  "isRead": true
-}&#93;&#93;&#93;></http:body>
-												<http:headers><![CDATA[#[output application/java
-&#45;&#45;-
-{
-	"Authorization" : "Bearer "++ vars.accesToken,
-	"Content-Type": "application/json"
-}&#93;&#93;&#93;></http:headers>
-												<http:uri-params><![CDATA[#[output application/java
-&#45;&#45;-
-{
-	"emailId" : vars.emailId
-}&#93;&#93;&#93;></http:uri-params>
-											</http:request>
-											<logger level="INFO" doc:name="email log" doc:id="c73afdd2-5589-40c7-9656-bc8368e3f673" message="email is read id: #[vars.emailId&#93;"/>
-											<error-handler>
-												<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="824bec60-18b1-4016-8b5f-5976639f4896" type="HTTP:BAD_REQUEST">
-													<set-variable value="#[true&#93;" doc:name="Set Error Flag" doc:id="bcd806c9-9ce9-4d85-87c6-d69ad980c15e" variableName="hasError3" />
-													<set-variable value="#[%dw 2.0&#10;output application/json&#10;&#45;&#45;-&#10;error.exception.localizedMessage default error.exception.message&#93;" doc:name="errorlog" doc:id="ca935d25-0db2-4727-ba28-a28ac2aa47a4" variableName="errorlog3" />
-													<logger level="INFO" doc:name="Logger" doc:id="899684de-c482-4ab7-a818-c0122cabddf5" message="#[error.errorMessage&#93;" />
-												</on-error-continue>
-											</error-handler>
-										</try>
-										<http:request method="POST" doc:name="post to salesforce-app" doc:id="bffa9ccc-80e9-43e0-b80f-554e5c197318" url="https://salesforce-app-jz0cco.2ky31l-2.deu-c1.eu1.cloudhub.io/api/accounts">
-							<http:body><![CDATA[#[vars.responseIDP&#93;&#93;&#93;></http:body>
-											<http:headers ><![CDATA[#[{
-	"Content-Type" : "application/json"
-}&#93;&#93;&#93;></http:headers>
-						</http:request>
-								<logger level="INFO" doc:name="Logger" doc:id="cbecb084-849b-44a1-a077-0ad13baf57e2" message="#[payload&#93;" />
-							</otherwise>
-						</choice> [STUDIO] -->
-								<vm:publish doc:name="Publish toexecutionIDPids" doc:id="afcdc21a-a5ba-4f14-950f-f5b6533efb4e" queueName="executionIDPids" config-ref="VM_Config">
+								<set-variable value="#[payload.id]" doc:name="executionID" doc:id="bfe0f63d-d887-4381-85df-2cdc17151468" variableName="executionID" />
+								<set-variable value="#[payload.documentName]" doc:name="docName" doc:id="a9cb08d0-006a-4139-ac70-323e0902c4e5" variableName="docName"/>
+												<vm:publish doc:name="Publish toexecutionIDPids" doc:id="afcdc21a-a5ba-4f14-950f-f5b6533efb4e" queueName="executionIDPids" config-ref="VM_Config">
 									<vm:content><![CDATA[#[output application/json
 ---
 {
     executionID:    vars.executionID,
-    idpaccessToken: vars.idpaccessToken
+    docName: vars.docName
 }]]]></vm:content>
 								</vm:publish>
+												<logger level="INFO" doc:name="Logger" doc:id="cbecb084-849b-44a1-a077-0ad13baf57e2" message="#[payload]" />
+							</otherwise>
+						</choice>
 										<try doc:name="Try1" doc:id="0fb5950b-7934-4300-b8d9-eb9213539872" >
 											<http:request method="PATCH" doc:name="email is read =true" doc:id="da6c57a5-691b-407c-a36d-1cb27110589a" url="https://graph.microsoft.com/v1.0/users/salesforce@devonshireunderwriting.co.uk/messages/{emailId}" >
 												<http:body ><![CDATA[#[output application/json
@@ -458,39 +423,6 @@ payload.access_token]]></ee:set-variable>
 			</choice>
 		</foreach>
 	</sub-flow>
-	<!-- [STUDIO:"get-idp-flow"]<sub-flow name="get-idp-flow" doc:id="f929217d-24da-43bf-85dd-7be037904b23" >
-		<http:request method="GET" doc:name="get field idp by executionID" doc:id="476e39d7-0312-4ef3-bbbb-1d3b729e9ff9" url="https://idp-rt.eu-central-1.eu1.anypoint.mulesoft.com/api/v1/organizations/3407bf92-994a-491e-8681-867155b39e77/actions/e4b0c468-ef0b-4197-8577-c1065f2a557b/versions/1.2.0/executions/{executionId}" >
-			<http:headers ><![CDATA[#[{
-	"authorization" : "Bearer "++ vars.idpaccessToken
-}&#93;&#93;&#93;></http:headers>
-			<http:uri-params ><![CDATA[#[output application/java
-&#45;&#45;-
-{
-	"executionId" : vars.executionID
-}&#93;&#93;&#93;></http:uri-params>
-		</http:request>
-		<choice doc:name="Choice" doc:id="c67acf22-d218-4947-a3af-d65291606898" >
-			<when expression='#[["IN_PROGRESS", "ACKNOWLEDGED", "RESULTS_PENDING"&#93; contains payload.status&#93;'>
-				<scripting:execute engine="groovy" doc:name="Execute" doc:id="5fe1d679-d11f-4f1d-bdda-f73f1dcbd79f">
-					<scripting:code><![CDATA[Thread.sleep(5000)
-return payload&#93;&#93;></scripting:code>
-				</scripting:execute>
-				<flow-ref doc:name="get-idp-flow (recursive)" doc:id="e38658a8-3840-488c-b2df-6f4893a2ad7a" name="get-idp-flow"/>
-			</when>
-			<otherwise >
-				<logger level="INFO" doc:name="Logger" doc:id="7b6e9a07-c685-4f9c-9f07-c892d90c09e1" message="#[payload&#93;" />
-				<ee:transform doc:name="responseIDP" doc:id="55709a15-eddf-4c6f-8650-74b5b882b43e" >
-					<ee:message />
-					<ee:variables >
-						<ee:set-variable variableName="responseIDP" ><![CDATA[%dw 2.0
-output application/json
-&#45;&#45;-
-payload&#93;&#93;></ee:set-variable>
-					</ee:variables>
-				</ee:transform>
-			</otherwise>
-		</choice>
-	</sub-flow> [STUDIO] -->
 	<sub-flow name="pdf-flow" doc:id="40e6acdd-f106-4242-a772-fb7f4136e441" >
 		<logger level="INFO" doc:name="Logger" doc:id="58c2a31c-1eca-4e4a-8e84-fe373f63efde" />
 		<http:request method="GET" doc:name="get token " doc:id="303961a1-daea-497a-9436-b02ec4602cb2" url="https://login.microsoftonline.com/737562ab-cffa-4c36-91ee-cc1904f63628/oauth2/v2.0/token" sendBodyMode="ALWAYS" >
@@ -527,7 +459,7 @@ output application/java
 (now() as Date {format: "yyyy-MM-dd"} as String) ++ "T00:00:00Z"]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
-		<http:request method="GET" doc:name="get emails" doc:id="0fb9e1f6-ba30-49ad-ada8-c62c22bf1de9" url="#['https://graph.microsoft.com/v1.0/users/salesforce@devonshireunderwriting.co.uk/messages?%24select=id%2Csubject%2ChasAttachments%2CisRead%2CtoRecipients%2CreceivedDateTime&amp;%24filter=hasAttachments%20eq%20true%20and%20isRead%20eq%20false%20and%20receivedDateTime%20ge%20' ++ vars.todayFilter]" >
+		<http:request method="GET" doc:name="get emails" doc:id="0fb9e1f6-ba30-49ad-ada8-c62c22bf1de9" url="#['https://graph.microsoft.com/v1.0/users/salesforce@devonshireunderwriting.co.uk/messages?%24select=id%2Csubject%2ChasAttachments%2CisRead%2CtoRecipients%2CreceivedDateTime&amp;%24filter=hasAttachments%20eq%20true%20and%20isRead%20eq%20false%20and%20receivedDateTime%20ge%20' ++ vars.todayFilter ++ '&amp;%24top=50']" >
 			<http:headers ><![CDATA[#[output application/java
 ---
 {
@@ -543,7 +475,7 @@ output application/json
   value: (payload.value filter (msg) ->
       sizeOf(
         (msg.toRecipients default [])
-          filter (r) -> lower(r.emailAddress.address default "") == "salesforce@devonshireunderwriting.co.uk"
+          filter (r) -> lower(r.emailAddress.address default "") == lower("Salesforce@devonshire-underwriting.co.uk")
       ) > 0
   ) map (msg) -> {
     id:      msg.id,
@@ -713,61 +645,58 @@ payload.access_token]]></ee:set-variable>
 							</when>
 							<otherwise >
 								<set-variable value="#[payload.id]" doc:name="executionID" doc:id="a1947ab1-6399-4931-94c1-94dba19ff047" variableName="executionID" />
+								<set-variable value="#[payload.documentName]" doc:name="docName" doc:id="f04a6055-16f4-43e7-a5af-cd3e8975dd46" variableName="docName"/>
 								<vm:publish doc:name="Publish toexecutionIDPids" doc:id="84c3bbc3-67ed-49d9-8e0a-40941be878cc" queueName="executionIDPids" config-ref="VM_Config">
 									<vm:content ><![CDATA[#[output application/json
 ---
 {
     executionID:    vars.executionID,
-    idpaccessToken: vars.idpaccessToken
+    docname: vars.docName
 }]]]></vm:content>
 								</vm:publish>
-								<!-- [STUDIO:"doc-extract"]<flow-ref doc:name="doc-extract" doc:id="d33d1be9-5d45-414e-b2b0-ef83fd8dcce8" name="doc-extract" /> [STUDIO] -->
-								<try doc:name="Try" doc:id="c3aa131e-5f26-460d-98fc-6064631d2f7e" >
-									<http:request method="PATCH" doc:name="email is read =true" doc:id="fde9bcb7-9628-45ca-8b09-af884a457686" url="https://graph.microsoft.com/v1.0/users/salesforce@devonshireunderwriting.co.uk/messages/{emailId}" >
-										<http:body ><![CDATA[#[output application/json
+								<remove-variable doc:name="Remove executionID" doc:id="afe47df6-bf6b-4b28-9dd1-7746878f8a12" variableName="executionID"/>
+								<remove-variable doc:name="Remove docName" doc:id="b8d2f98a-bebf-4dbe-a93f-c703554d2807" variableName="docName"/>
+							</otherwise>
+						</choice>
+						<try doc:name="Try" doc:id="c3aa131e-5f26-460d-98fc-6064631d2f7e">
+									<http:request method="PATCH" doc:name="email is read =true" doc:id="fde9bcb7-9628-45ca-8b09-af884a457686" url="https://graph.microsoft.com/v1.0/users/salesforce@devonshireunderwriting.co.uk/messages/{emailId}">
+										<http:body><![CDATA[#[output application/json
 ---
 {
   "isRead": true
 }]]]></http:body>
-										<http:headers ><![CDATA[#[output application/java
+										<http:headers><![CDATA[#[output application/java
 ---
 {
 	"Authorization" : "Bearer "++ vars.accesToken,
 	"Content-Type": "application/json"
 }]]]></http:headers>
-										<http:uri-params ><![CDATA[#[output application/java
+										<http:uri-params><![CDATA[#[output application/java
 ---
 {
 	"emailId" : vars.emailId
 }]]]></http:uri-params>
 									</http:request>
 									<logger level="INFO" doc:name="email log" doc:id="314550bc-9068-4a36-afe4-c732644d48f0" message="email is read id: #[vars.emailId]" />
-									<error-handler >
-										<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="6e21ad02-e6d0-4e1a-b183-dc37762e1c27" type="ANY" >
+									<error-handler>
+										<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="6e21ad02-e6d0-4e1a-b183-dc37762e1c27" type="ANY">
 											<set-variable value="#[true]" doc:name="Set Error Flag" doc:id="1b83819a-c841-4115-b956-bdf3e95dacdd" variableName="hasError4" />
 											<set-variable value="#[%dw 2.0&#10;output application/json&#10;---&#10;error.exception.localizedMessage default error.exception.message]" doc:name="errorlog" doc:id="df23dd70-e24f-4f90-882d-c5591f6d9bdf" variableName="errorlog4" />
 											<logger level="INFO" doc:name="Logger" doc:id="36f19624-83b5-4b3e-a1f2-aa95b6648b4b" message="#[error.errorMessage]" />
 										</on-error-continue>
 									</error-handler>
 								</try>
-								<choice doc:name="Choice" doc:id="e81d2fb0-ac00-47f6-986f-3a093c0c543d">
+						<logger level="INFO" doc:name="Logger" doc:id="0613dba3-915d-44c9-b6a8-704d2b0a7309" />
+						<choice doc:name="Choice" doc:id="e81d2fb0-ac00-47f6-986f-3a093c0c543d">
 									<when expression="#[vars.hasError4 == true]">
 										<logger level="INFO" doc:name="Skip Iteration" doc:id="ef457555-f841-4fb1-b77a-25748385a58d" message="#['Skipping doc: ' ++ vars.pdfName ++ ' due to error: ' ++ vars.errorlog3]" />
 										<remove-variable doc:name="Remove Variable hasError" doc:id="de34b325-65b7-4aff-9acc-8dc912fe161d" variableName="hasError4" />
 									</when>
 									<otherwise>
 										<logger level="INFO" doc:name="email Info" doc:id="f804cd64-5d08-47ff-a059-a9d5f18da894" message="marke email as read = true" />
-										<http:request method="POST" doc:name="post to salesforce-app" doc:id="789768a9-b1b6-481b-ae71-dab735f1a590" url="https://salesforce-app-jz0cco.2ky31l-2.deu-c1.eu1.cloudhub.io/api/accounts">
-									<http:body><![CDATA[#[vars.responseIDP]]]></http:body>
-									<http:headers><![CDATA[#[{
-	"Content-Type" : "application/json"
-}]]]></http:headers>
-								</http:request>
 										<logger level="INFO" doc:name="Logger" doc:id="21399351-557e-48e1-8b3e-e051f8ef5c6f" message="#[payload]" />
 									</otherwise>
 								</choice>
-							</otherwise>
-						</choice>
 					</foreach>
 				</otherwise>
 			</choice>
@@ -826,13 +755,13 @@ payload&#93;&#93;></ee:set-variable>
 		</round-robin>
 		<error-handler ref="error-handling-app" />
 	</flow> [STUDIO] -->
-	<flow name="doctopdf-apiFlow1" doc:id="2aec0938-c63f-4689-927d-d8ab63376b1b" >
+	<flow name="test-schedular" doc:id="2aec0938-c63f-4689-927d-d8ab63376b1b" >
 		<scheduler doc:name="Scheduler" doc:id="46b70f7f-84b3-418d-82ac-3d44ddcba464" >
 			<scheduling-strategy >
 				<fixed-frequency frequency="1" timeUnit="MINUTES"/>
 			</scheduling-strategy>
 		</scheduler>
-		<flow-ref doc:name="doctopdf-apiFlow" doc:id="8ebbf21b-16ad-4250-b9a7-b3a0efcb1211" name="doctopdf-apiFlow" />
+		<flow-ref doc:name="doctopdf-apiFlow" doc:id="8ebbf21b-16ad-4250-b9a7-b3a0efcb1211" name="pdf-flow" />
 	</flow>
 	<sub-flow name="excelFlow" doc:id="31df1c01-c82c-454e-9591-d11a58333e79">
 
@@ -872,7 +801,7 @@ output application/java
 (now() as Date {format: "yyyy-MM-dd"} as String) ++ "T00:00:00Z"]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
-		<http:request method="GET" doc:name="get emails1" doc:id="61161659-7c50-48f3-9e5a-b4661b82df5a" url="#['https://graph.microsoft.com/v1.0/users/salesforce@devonshireunderwriting.co.uk/messages?%24select=id%2Csubject%2ChasAttachments%2CisRead%2CtoRecipients%2CreceivedDateTime&amp;%24filter=hasAttachments%20eq%20true%20and%20isRead%20eq%20false%20and%20receivedDateTime%20ge%20' ++ vars.todayFilter]" >
+		<http:request method="GET" doc:name="get emails1" doc:id="61161659-7c50-48f3-9e5a-b4661b82df5a" url="#['https://graph.microsoft.com/v1.0/users/salesforce@devonshireunderwriting.co.uk/messages?%24select=id%2Csubject%2ChasAttachments%2CisRead%2CtoRecipients%2CreceivedDateTime&amp;%24filter=hasAttachments%20eq%20true%20and%20isRead%20eq%20false%20and%20receivedDateTime%20ge%20' ++ vars.todayFilter ++ '&amp;%24top=50']" >
 			<http:headers ><![CDATA[#[output application/java
 ---
 {
@@ -1163,7 +1092,7 @@ output application/json
           </ee:message>
         </ee:transform>
 
-        <http:request method="POST" doc:name="post to salesforce-app" url="http://0.0.0.0:8081/api/accounts">
+        <http:request method="POST" doc:name="post to salesforce-app" url="https://salesforce-app-jz0cco.2ky31l-2.deu-c1.eu1.cloudhub.io/api/accounts">
           <http:headers><![CDATA[#[{
   "Content-Type": "application/json"
 }]]]></http:headers>
@@ -1208,10 +1137,10 @@ output application/json
 output application/json
 ---
 payload.executionID]]></ee:set-variable>
-				<ee:set-variable variableName="vmidpaccessToken" ><![CDATA[%dw 2.0
+				<ee:set-variable variableName="vmdocName" ><![CDATA[%dw 2.0
 output application/json
 ---
-payload.idpaccessToken]]></ee:set-variable>
+payload.docName]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
 		<try doc:name="Try" doc:id="3be182e5-dcd8-403b-a49a-d4f36527e117" >
@@ -1253,44 +1182,15 @@ payload.access_token]]></ee:set-variable>
 	"executionId" : vars.vmexecutionID
 }]]]></http:uri-params>
 			</http:request>
-			<ee:transform doc:name="prepareData" doc:id="ae22f1a6-9b80-4d47-8d72-6e7a7aeb5586" >
-				<ee:message >
-					<ee:set-payload ><![CDATA[%dw 2.0
-output application/json
----
-payload.fields mapObject ((value, key) ->
-  {
-    (key): {
-      value: if (value.value is String) 
-               read(value.value, "application/json") 
-             else 
-               value.value
-    }
-  }
-)]]></ee:set-payload>
-				</ee:message>
-			</ee:transform>
 			<ee:transform doc:name="cleanData" doc:id="a110ff09-5623-4a50-87c9-4dd352edd243" >
 				<ee:message />
 				<ee:variables >
 					<ee:set-variable variableName="outputIDP" ><![CDATA[%dw 2.0
 output application/json
-
-fun unwrapArrays(v) =
-  v match {
-    case arr is Array ->
-      if (sizeOf(arr) == 0) arr
-      else if (sizeOf(arr) == 1) unwrapArrays(arr[0])
-      else if (arr[0] is Object) arr map unwrapArrays($)
-      else (arr map (unwrapArrays($) as String)) joinBy ", "
-
-    case obj is Object -> obj mapObject ((value, key) -> (key): unwrapArrays(value))
-
-    else -> v
-  }
-
 ---
-unwrapArrays(payload)]]></ee:set-variable>
+prompt:{
+   value: read(payload.fields.prompt.value)
+}]]></ee:set-variable>
 				</ee:variables>
 			</ee:transform>
 			<choice doc:name="Choice" doc:id="3b1c22b6-19e5-474d-ba2a-9da3a2d939ed" >
@@ -1305,17 +1205,17 @@ output application/json
 fun mapIndustry(payload: Object) =
   do {
     var corpus = lower(
-      (vars.outputIDP.prompt.value.project.documentType          default "") ++ " " ++
-      (vars.outputIDP.prompt.value.project.doctype               default "") ++ " " ++
-      (vars.outputIDP.prompt.value.project.projectName           default "") ++ " " ++
-      (vars.outputIDP.prompt.value.insured.namedInsured          default "") ++ " " ++
-      (vars.outputIDP.prompt.value.taxRisk.typeOfTaxRisk         default "") ++ " " ++
+     (vars.outputIDP.prompt.value.project.documentType           default "") ++ " " ++
+      (vars.outputIDP.prompt.value.project.doctype                default "") ++ " " ++
+      (vars.outputIDP.prompt.value.project.projectName            default "") ++ " " ++
+      (vars.outputIDP.prompt.value.project.broker                 default "") ++ " " ++
+      (vars.outputIDP.prompt.value.insured.namedInsured[0]          default "") ++ " " ++
       (vars.outputIDP.prompt.value.taxRisk.riskDescription       default "") ++ " " ++
       (vars.outputIDP.prompt.value.taxRisk.insuredTaxEvent       default "") ++ " " ++
       (vars.outputIDP.prompt.value.policyTerms.coverScope        default "") ++ " " ++
       (vars.outputIDP.prompt.value.taxRisk.taxCounselOpinion     default "") ++ " " ++
       (vars.outputIDP.prompt.value.taxRisk.priorAuditOrClearance default "") ++ " " ++
-      (vars.outputIDP.prompt.value.keyRiskMitigants              default "")
+      (vars.outputIDP.prompt.value.keyRiskMitigants [0]              default "")
     )
 
     // Use an Array of Objects instead of Object keys
@@ -1377,16 +1277,17 @@ output application/json
 fun mapOwnership(payload: Object) =
   do {
     var corpus = lower(
-      (vars.outputIDP.prompt.value.project.documentType          default "") ++ " " ++
-      (vars.outputIDP.prompt.value.project.doctype               default "") ++ " " ++
-      (vars.outputIDP.prompt.value.project.projectName           default "") ++ " " ++
-      (vars.outputIDP.prompt.value.insured.namedInsured          default "") ++ " " ++
-      (vars.outputIDP.prompt.value.insured.ultimateBeneficialOwner default "") ++ " " ++
+      (vars.outputIDP.prompt.value.project.documentType           default "") ++ " " ++
+      (vars.outputIDP.prompt.value.project.doctype                default "") ++ " " ++
+      (vars.outputIDP.prompt.value.project.projectName            default "") ++ " " ++
+      (vars.outputIDP.prompt.value.project.broker                 default "") ++ " " ++
+      (vars.outputIDP.prompt.value.insured.namedInsured[0]          default "") ++ " " ++
       (vars.outputIDP.prompt.value.taxRisk.riskDescription       default "") ++ " " ++
       (vars.outputIDP.prompt.value.taxRisk.insuredTaxEvent       default "") ++ " " ++
       (vars.outputIDP.prompt.value.policyTerms.coverScope        default "") ++ " " ++
+      (vars.outputIDP.prompt.value.taxRisk.taxCounselOpinion     default "") ++ " " ++
       (vars.outputIDP.prompt.value.taxRisk.priorAuditOrClearance default "") ++ " " ++
-      (vars.outputIDP.prompt.value.keyRiskMitigants              default "")
+      (vars.outputIDP.prompt.value.keyRiskMitigants [0]              default "")
     )
     var ownershipKeywords = [
       {
@@ -1439,17 +1340,17 @@ output application/json
 fun mapAccountSource(payload: Object) =
   do {
     var corpus = lower(
-      (vars.outputIDP.prompt.value.project.documentType          default "") ++ " " ++
-      (vars.outputIDP.prompt.value.project.doctype               default "") ++ " " ++
-      (vars.outputIDP.prompt.value.project.projectName           default "") ++ " " ++
-      (vars.outputIDP.prompt.value.project.broker                default "") ++ " " ++
-      (vars.outputIDP.prompt.value.insured.namedInsured          default "") ++ " " ++
+      (vars.outputIDP.prompt.value.project.documentType           default "") ++ " " ++
+      (vars.outputIDP.prompt.value.project.doctype                default "") ++ " " ++
+      (vars.outputIDP.prompt.value.project.projectName            default "") ++ " " ++
+      (vars.outputIDP.prompt.value.project.broker                 default "") ++ " " ++
+      (vars.outputIDP.prompt.value.insured.namedInsured[0]          default "") ++ " " ++
       (vars.outputIDP.prompt.value.taxRisk.riskDescription       default "") ++ " " ++
       (vars.outputIDP.prompt.value.taxRisk.insuredTaxEvent       default "") ++ " " ++
       (vars.outputIDP.prompt.value.policyTerms.coverScope        default "") ++ " " ++
       (vars.outputIDP.prompt.value.taxRisk.taxCounselOpinion     default "") ++ " " ++
       (vars.outputIDP.prompt.value.taxRisk.priorAuditOrClearance default "") ++ " " ++
-      (vars.outputIDP.prompt.value.keyRiskMitigants              default "")
+      (vars.outputIDP.prompt.value.keyRiskMitigants [0]              default "")
     )
     var accountSourceKeywords = [
       {
@@ -1548,15 +1449,17 @@ output application/json
 fun mapRating(outputIDP: Object) =
   do {
     var corpus = lower(
-      (vars.outputIDP.prompt.value.project.documentType          default "") ++ " " ++
-      (vars.outputIDP.prompt.value.project.doctype               default "") ++ " " ++
-      (vars.outputIDP.prompt.value.project.nbiDeadline           default "") ++ " " ++
+      (vars.outputIDP.prompt.value.project.documentType           default "") ++ " " ++
+      (vars.outputIDP.prompt.value.project.doctype                default "") ++ " " ++
+      (vars.outputIDP.prompt.value.project.projectName            default "") ++ " " ++
+      (vars.outputIDP.prompt.value.project.broker                 default "") ++ " " ++
+      (vars.outputIDP.prompt.value.insured.namedInsured[0]          default "") ++ " " ++
       (vars.outputIDP.prompt.value.taxRisk.riskDescription       default "") ++ " " ++
-      (vars.outputIDP.prompt.value.taxRisk.riskRating            default "") ++ " " ++
       (vars.outputIDP.prompt.value.taxRisk.insuredTaxEvent       default "") ++ " " ++
-      (vars.outputIDP.prompt.value.taxRisk.priorAuditOrClearance default "") ++ " " ++
       (vars.outputIDP.prompt.value.policyTerms.coverScope        default "") ++ " " ++
-      (vars.outputIDP.prompt.value.keyRiskMitigants              default "")
+      (vars.outputIDP.prompt.value.taxRisk.taxCounselOpinion     default "") ++ " " ++
+      (vars.outputIDP.prompt.value.taxRisk.priorAuditOrClearance default "") ++ " " ++
+      (vars.outputIDP.prompt.value.keyRiskMitigants [0]              default "")
     )
     var ratingKeywords = [
       {
@@ -1610,13 +1513,13 @@ fun mapType(outputIDP: Object) =
       (vars.outputIDP.prompt.value.project.doctype               default "") ++ " " ++
       (vars.outputIDP.prompt.value.project.broker                default "") ++ " " ++
       (vars.outputIDP.prompt.value.project.projectName           default "") ++ " " ++
-      (vars.outputIDP.prompt.value.insured.namedInsured          default "") ++ " " ++
+      (vars.outputIDP.prompt.value.insured.namedInsured   [0]        default "") ++ " " ++
       (vars.outputIDP.prompt.value.taxRisk.riskDescription       default "") ++ " " ++
       (vars.outputIDP.prompt.value.taxRisk.insuredTaxEvent       default "") ++ " " ++
       (vars.outputIDP.prompt.value.taxRisk.taxCounselOpinion     default "") ++ " " ++
       (vars.outputIDP.prompt.value.policyTerms.coverScope        default "") ++ " " ++
       (vars.outputIDP.prompt.value.parties.taxCounsel            default "") ++ " " ++
-      (vars.outputIDP.prompt.value.keyRiskMitigants              default "")
+      (vars.outputIDP.prompt.value.keyRiskMitigants [0]             default "")
     )
     var typeKeywords = [
       {
@@ -1676,13 +1579,13 @@ fun mapAccountSource(payload: Object) =
       (vars.outputIDP.prompt.value.project.doctype               default "") ++ " " ++
       (vars.outputIDP.prompt.value.project.projectName           default "") ++ " " ++
       (vars.outputIDP.prompt.value.project.broker                default "") ++ " " ++
-      (vars.outputIDP.prompt.value.insured.namedInsured          default "") ++ " " ++
+      (vars.outputIDP.prompt.value.insured.namedInsured   [0]        default "") ++ " " ++
       (vars.outputIDP.prompt.value.taxRisk.riskDescription       default "") ++ " " ++
       (vars.outputIDP.prompt.value.taxRisk.insuredTaxEvent       default "") ++ " " ++
       (vars.outputIDP.prompt.value.policyTerms.coverScope        default "") ++ " " ++
       (vars.outputIDP.prompt.value.taxRisk.taxCounselOpinion     default "") ++ " " ++
       (vars.outputIDP.prompt.value.taxRisk.priorAuditOrClearance default "") ++ " " ++
-      (vars.outputIDP.prompt.value.keyRiskMitigants              default "")
+      (vars.outputIDP.prompt.value.keyRiskMitigants  [0]             default "")
     )
     var accountSourceKeywords = [
       {
@@ -1810,7 +1713,7 @@ output application/json
   Site: vars.outputIDP.prompt.value.project.projectName,
   AccountSource: vars.accountSource.accountSource,
   AnnualRevenue: vars.annualRevenue.ExpectedRevenue ,
-  BillingAddress: vars.outputIDP.prompt.value.insured.namedInsured,
+  BillingAddress: vars.outputIDP.prompt.value.insured.namedInsured [0],
   Jigsaw: vars.outputIDP.prompt.value.policyTerms.policyType ,
   Description: vars.outputIDP.prompt.value.taxRisk.riskDescription,
   //tier nf
@@ -1820,7 +1723,7 @@ output application/json
   Ownership : vars.ownership.ownership ,
   Phone: vars.outputIDP.prompt.value.project.Phone default "" ,
   Rating : vars.rating.rating,
-  ShippingAddress: vars.outputIDP.prompt.value.insured.namedInsured default "",
+  ShippingAddress: vars.outputIDP.prompt.value.insured.namedInsured [0] default "",
   Sic:  vars.outputIDP.prompt.value.parties.taxCounsel ,
   SicDesc: vars.outputIDP.prompt.value.advisorConclusion default "",
   //SLA__c: nf
@@ -1856,7 +1759,7 @@ output application/json
     LeadSource : vars.leadsource.leadSource ,
     MailingAddress: (vars.outputIDP.prompt.value.project.brokerContacts.*email) joinBy ", " default "" ,
     MobilePhone: (vars.outputIDP.prompt.value.project.brokerContacts.*phone) joinBy ", "  default "",
-    Name: vars.outputIDP.prompt.value.insured.namedInsured ,
+    Name: vars.outputIDP.prompt.value.insured.namedInsured  [0] ,
     OtherAddress: vars.outputIDP.prompt.value.insured.insuredJurisdiction ,
     OtherPhone: vars.outputIDP.prompt.value.project.phone default "",
     Phone: (vars.outputIDP.prompt.value.project.brokerContacts.*phone) joinBy ", "  default "",
@@ -1881,7 +1784,7 @@ fun mapBudgetConfirmed(outputIDP: Object) =
       (vars.outputIDP.prompt.value.policyTerms.requestedLimits   default "") ++ " " ++
       (vars.outputIDP.prompt.value.policyTerms.retention         default "") ++ " " ++
       (vars.outputIDP.prompt.value.policyTerms.coverScope        default "") ++ " " ++
-      (vars.outputIDP.prompt.value.keyRiskMitigants              default "")
+      (vars.outputIDP.prompt.value.keyRiskMitigants  [0]            default "")
     )
     var confirmedKeywords = [
       "budget confirmed", "budget approved", "budget agreed",
@@ -1978,14 +1881,14 @@ fun mapLossReason(outputIDP: Object) =
       (vars.outputIDP.prompt.value.project.documentType          default "") ++ " " ++
       (vars.outputIDP.prompt.value.project.doctype               default "") ++ " " ++
       (vars.outputIDP.prompt.value.project.broker                default "") ++ " " ++
-      (vars.outputIDP.prompt.value.insured.namedInsured          default "") ++ " " ++
+      (vars.outputIDP.prompt.value.insured.namedInsured [0]         default "") ++ " " ++
       (vars.outputIDP.prompt.value.taxRisk.riskDescription       default "") ++ " " ++
       (vars.outputIDP.prompt.value.taxRisk.insuredTaxEvent       default "") ++ " " ++
       (vars.outputIDP.prompt.value.taxRisk.jurisdiction          default "") ++ " " ++
-      (vars.outputIDP.prompt.value.policyTerms.requestedLimits   default "") ++ " " ++
+      (vars.outputIDP.prompt.value.policyTerms.requestedLimits[0]   default "") ++ " " ++
       (vars.outputIDP.prompt.value.policyTerms.coverScope        default "") ++ " " ++
       (vars.outputIDP.prompt.value.taxRisk.priorAuditOrClearance default "") ++ " " ++
-      (vars.outputIDP.prompt.value.keyRiskMitigants              default "")
+      (vars.outputIDP.prompt.value.keyRiskMitigants   [0]           default "")
     )
     var lossReasonKeywords = [
       {
@@ -2108,9 +2011,9 @@ fun mapStageFields(outputIDP: Object) =
       (payload.prompt.value.taxRisk.insuredTaxEvent       default "") ++ " " ++
       (payload.prompt.value.taxRisk.priorAuditOrClearance default "") ++ " " ++
       (payload.prompt.value.taxRisk.taxCounselOpinion     default "") ++ " " ++
-      (payload.prompt.value.policyTerms.requestedLimits   default "") ++ " " ++
+      (payload.prompt.value.policyTerms.requestedLimits [0]  default "") ++ " " ++
       (payload.prompt.value.policyTerms.coverScope        default "") ++ " " ++
-      (payload.prompt.value.keyRiskMitigants              default "")
+      (payload.prompt.value.keyRiskMitigants   [0]           default "")
     )
     var stageBands = [
       {
@@ -2218,7 +2121,7 @@ fun mapProductType(outputIDP: Object) =
       (vars.outputIDP.prompt.value.taxRisk.insuredTaxEvent       default "") ++ " " ++
       (vars.outputIDP.prompt.value.policyTerms.policyType        default "") ++ " " ++
       (vars.outputIDP.prompt.value.policyTerms.coverScope        default "") ++ " " ++
-      (vars.outputIDP.prompt.value.keyRiskMitigants              default "")
+      (vars.outputIDP.prompt.value.keyRiskMitigants  [0]            default "")
     )
     var productTypeKeywords = [
       {
@@ -2272,13 +2175,13 @@ fun mapBusinessSector(outputIDP: Object) =
       (vars.outputIDP.prompt.value.project.documentType          default "") ++ " " ++
       (vars.outputIDP.prompt.value.project.doctype               default "") ++ " " ++
       (vars.outputIDP.prompt.value.project.projectName           default "") ++ " " ++
-      (vars.outputIDP.prompt.value.insured.namedInsured          default "") ++ " " ++
+      (vars.outputIDP.prompt.value.insured.namedInsured [0]         default "") ++ " " ++
       (vars.outputIDP.prompt.value.taxRisk.typeOfTaxRisk         default "") ++ " " ++
       (vars.outputIDP.prompt.value.taxRisk.riskDescription       default "") ++ " " ++
       (vars.outputIDP.prompt.value.taxRisk.insuredTaxEvent       default "") ++ " " ++
       (vars.outputIDP.prompt.value.policyTerms.coverScope        default "") ++ " " ++
       (vars.outputIDP.prompt.value.taxRisk.taxCounselOpinion     default "") ++ " " ++
-      (vars.outputIDP.prompt.value.keyRiskMitigants              default "")
+      (vars.outputIDP.prompt.value.keyRiskMitigants [0]             default "")
     )
     var sectorKeywords = [
       {
@@ -2476,7 +2379,7 @@ fun mapInsuredJurisdiction(outputIDP: Object) =
       (vars.outputIDP.prompt.value.taxRisk.taxAuthority          default "") ++ " " ++
       (vars.outputIDP.prompt.value.taxRisk.riskDescription       default "") ++ " " ++
       (vars.outputIDP.prompt.value.policyTerms.governingLaw      default "") ++ " " ++
-      (vars.outputIDP.prompt.value.insured.namedInsured          default "")
+      (vars.outputIDP.prompt.value.insured.namedInsured [0]         default "")
     )
 
     // Each entry: exact picklist name + keywords to detect it in the corpus
@@ -2704,7 +2607,7 @@ fun mapProductSubType(outputIDP: Object) =
       (vars.outputIDP.prompt.value.taxRisk.priorAuditOrClearance default "") ++ " " ++
       (vars.outputIDP.prompt.value.policyTerms.policyType        default "") ++ " " ++
       (vars.outputIDP.prompt.value.policyTerms.coverScope        default "") ++ " " ++
-      (vars.outputIDP.prompt.value.keyRiskMitigants              default "")
+      (vars.outputIDP.prompt.value.keyRiskMitigants  [0]            default "")
     )
     var subTypeKeywords = [
       {
@@ -2786,7 +2689,7 @@ fun mapClaimStatus(outputIDP: Object) =
       (vars.outputIDP.prompt.value.taxRisk.insuredTaxEvent       default "") ++ " " ++
       (vars.outputIDP.prompt.value.taxRisk.priorAuditOrClearance default "") ++ " " ++
       (vars.outputIDP.prompt.value.policyTerms.coverScope        default "") ++ " " ++
-      (vars.outputIDP.prompt.value.keyRiskMitigants              default "")
+      (vars.outputIDP.prompt.value.keyRiskMitigants  [0]            default "")
     )
     var claimStatusKeywords = [
       {
@@ -2870,9 +2773,9 @@ fun mapRiskLayer(outputIDP: Object) =
       (vars.outputIDP.prompt.value.taxRisk.riskDescription       default "") ++ " " ++
       (vars.outputIDP.prompt.value.policyTerms.policyType        default "") ++ " " ++
       (vars.outputIDP.prompt.value.policyTerms.coverScope        default "") ++ " " ++
-      (vars.outputIDP.prompt.value.policyTerms.requestedLimits   default "") ++ " " ++
+      (vars.outputIDP.prompt.value.policyTerms.requestedLimits [0]  default "") ++ " " ++
       (vars.outputIDP.prompt.value.policyTerms.retention         default "") ++ " " ++
-      (vars.outputIDP.prompt.value.keyRiskMitigants              default "")
+      (vars.outputIDP.prompt.value.keyRiskMitigants [0]             default "")
     )
     var riskLayerKeywords = [
       {
@@ -2951,7 +2854,7 @@ output application/json
 ---
 {
     //AccountId: vars. accountid
-    Amount: vars.outputIDP.prompt.value.policyTerms.requestedLimits,
+    Amount: vars.outputIDP.prompt.value.policyTerms.requestedLimits[0],
     Budget_Confirmed__c : vars.budgetConfirmation.budgetConfirmed ,
     CloseDate : vars.closeDateformating.nbiDeadline,
     //ContactId vars. contactid
@@ -2963,7 +2866,7 @@ output application/json
     Loss_Reason__c : vars.lossReason.lossReason ,
     NextStep : vars.outputIDP.prompt.value.taxRisk.priorAuditOrClearance,
     CurrencyIsoCode : vars.outputIDP.prompt.value.taxRisk.taxExposureCurrency default "",
-    Name: vars.outputIDP.prompt.value.project.projectName,
+    Name: vars.outputIDP.prompt.value.project.projectName [0],
     //OwnerId
    //IqScore field not found
    //Pricebook2Id manuel
@@ -2986,7 +2889,7 @@ output application/json
    //Deal_Type__c nf
    Account_Number__c : vars.outputIDP.prompt.value.project.projectName,
    Business_Sector__c : vars.businesSector.businessSector ,
-   Taxpayer_Name__c: vars.outputIDP.prompt.value.insured.namedInsured,
+   Taxpayer_Name__c: vars.outputIDP.prompt.value.insured.namedInsured [0],
    Insured_Jurisdiction__c: vars.InsuredJurisdiction.insuredJurisdiction ,
    Key_Risk_Jurisdiction__c: vars.InsuredJurisdiction.insuredJurisdiction,
    Product_Sub_Type__c: vars.productSubType.productSubType ,
@@ -3018,7 +2921,7 @@ output application/json
 						</ee:message>
 					</ee:transform>
 					<logger level="INFO" doc:name="Logger" doc:id="6d80bae4-3694-4eba-8891-d4cc22f3df27" message="#[payload]" />
-					<http:request method="POST" doc:name="Request" doc:id="63cce6d4-a6d7-438e-bfdb-96d313b8c2d1" url="http://0.0.0.0:8081/api/accounts" >
+					<http:request method="POST" doc:name="Request" doc:id="63cce6d4-a6d7-438e-bfdb-96d313b8c2d1" url="https://salesforce-app-jz0cco.2ky31l-2.deu-c1.eu1.cloudhub.io/api/accounts" >
 						<http:headers ><![CDATA[#[{
 	"Content-Type" : "application/json"
 }]]]></http:headers>
@@ -4816,7 +4719,7 @@ output application/json
 						</ee:message>
 					</ee:transform>
 					<logger level="INFO" doc:name="Logger" doc:id="73e6da26-8c95-41ee-ac62-a57954f0f752" message="#[payload]" />
-					<http:request method="POST" doc:name="Request" doc:id="047d1da7-853c-4c93-82ea-f5828551c4f3" url="http://0.0.0.0:8081/api/accounts" >
+					<http:request method="POST" doc:name="Request" doc:id="047d1da7-853c-4c93-82ea-f5828551c4f3" url="https://salesforce-app-jz0cco.2ky31l-2.deu-c1.eu1.cloudhub.io/api/accounts" >
 						<http:headers ><![CDATA[#[{
 	"Content-Type" : "application/json"
 }]]]></http:headers>
@@ -6698,7 +6601,7 @@ output application/json
 						</ee:message>
 					</ee:transform>
 					<logger level="INFO" doc:name="Logger1" doc:id="a68e1666-04e7-4c27-b384-d99d53bf4cc7" message="#[payload]" />
-					<http:request method="POST" doc:name="Request" doc:id="a0511263-8470-489a-a84c-72eb9a0c901f" url="http://0.0.0.0:8081/api/accounts" >
+					<http:request method="POST" doc:name="Request" doc:id="a0511263-8470-489a-a84c-72eb9a0c901f" url="https://salesforce-app-jz0cco.2ky31l-2.deu-c1.eu1.cloudhub.io/api/accounts" >
 						<http:headers ><![CDATA[#[{
 	"Content-Type" : "application/json"
 }]]]></http:headers>
