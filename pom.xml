@@ -4,7 +4,7 @@
 
 	<groupId>3407bf92-994a-491e-8681-867155b39e77</groupId>
 	<artifactId>doctopdf-api</artifactId>
-	<version>1.0.1</version>
+	<version>1.0.2</version>
 	<packaging>mule-application</packaging>
 
 	<name>doctopdf-api</name>
@@ -66,6 +66,17 @@
 			<artifactId>mule-plugin-idp-action-e4b0c468-ef0b-4197-8577-c1065f2a557b</artifactId>
 			<version>1.0.0</version>
 			<classifier>mule-plugin</classifier>
+		</dependency>
+		<dependency>
+			<groupId>org.mule.modules</groupId>
+			<artifactId>mule-scripting-module</artifactId>
+			<version>2.1.1</version>
+			<classifier>mule-plugin</classifier>
+		</dependency>
+		<dependency>
+			<groupId>org.codehaus.groovy</groupId>
+			<artifactId>groovy-jsr223</artifactId>
+			<version>3.0.19</version>
 		</dependency>
 
 		<dependency>

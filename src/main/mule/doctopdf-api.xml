@@ -756,17 +756,9 @@ payload&#93;&#93;></ee:set-variable>
 				<fixed-frequency frequency="1" timeUnit="MINUTES"/>
 			</scheduling-strategy>
 		</scheduler>
-		<round-robin doc:name="Round Robin" doc:id="2aca36ee-a4e5-4180-9064-093f24eb0a98" >
-			<route >
-				<flow-ref doc:name="doctopdf-apiFlow" doc:id="6042c221-93f9-4307-a300-82a20573118f" name="doctopdf-apiFlow"/>
-			</route>
-			<route >
-				<flow-ref doc:name="pdf-flow" doc:id="e4569bff-129f-4336-8d29-cc81f43b29e3" name="pdf-flow"/>
-			</route>
-			<route >
-				<flow-ref doc:name="excelFlow" doc:id="56e1b12d-2ca3-4d42-9895-33c52020cd04" name="excelFlow"/>
-			</route>
-		</round-robin>
+		<flow-ref doc:name="pdf-flow" doc:id="e4569bff-129f-4336-8d29-cc81f43b29e3" name="pdf-flow" />
+		<flow-ref doc:name="doctopdf-apiFlow" doc:id="6042c221-93f9-4307-a300-82a20573118f" name="doctopdf-apiFlow" />
+		<flow-ref doc:name="excelFlow" doc:id="56e1b12d-2ca3-4d42-9895-33c52020cd04" name="excelFlow" />
 		<error-handler ref="error-handling-app" />
 	</flow>
 	<sub-flow name="excelFlow" doc:id="31df1c01-c82c-454e-9591-d11a58333e79">
