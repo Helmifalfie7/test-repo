@@ -756,9 +756,33 @@ payload&#93;&#93;></ee:set-variable>
 				<fixed-frequency frequency="1" timeUnit="MINUTES"/>
 			</scheduling-strategy>
 		</scheduler>
-		<flow-ref doc:name="pdf-flow" doc:id="e4569bff-129f-4336-8d29-cc81f43b29e3" name="pdf-flow" />
-		<flow-ref doc:name="doctopdf-apiFlow" doc:id="6042c221-93f9-4307-a300-82a20573118f" name="doctopdf-apiFlow" />
-		<flow-ref doc:name="excelFlow" doc:id="56e1b12d-2ca3-4d42-9895-33c52020cd04" name="excelFlow" />
+		<logger level="INFO" doc:name="checking incoming emails in progress" doc:id="187f0ea6-ef7e-4b7b-883a-244f89342f91" message="checking incoming emails in progress"/>
+		<try doc:name="Try" doc:id="2118ec0b-cc64-4d03-b33c-6c7ec686028f" >
+			<flow-ref doc:name="pdf-flow" doc:id="e4569bff-129f-4336-8d29-cc81f43b29e3" name="pdf-flow" />
+			<error-handler >
+				<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="86c94e8b-f6c7-4700-a5a3-c2eca31144b2" >
+					<logger level="INFO" doc:name="unexpected error on pdf flow" doc:id="883586d9-9014-44f8-982b-9f4d49454500" message="unexpected error on pdf flow"/>
+				</on-error-continue>
+			</error-handler>
+		</try>
+		<logger level="INFO" doc:name="no pdf emails in inbox , checking doc emails" doc:id="0f23582e-ed6c-4c18-abe6-a5f61d9b3ff2" message="no pdf emails in inbox , checking doc emails"/>
+		<try doc:name="Try" doc:id="2511629e-76d2-43d4-9505-b376d2aba179" >
+			<flow-ref doc:name="doctopdf-apiFlow" doc:id="6042c221-93f9-4307-a300-82a20573118f" name="doctopdf-apiFlow" />
+			<error-handler >
+				<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="0fb9779c-e9f8-4daa-8578-d282294aa5af" >
+					<logger level="INFO" doc:name="unexpected error on doc flow" doc:id="2eff01b3-28a9-4ab8-9449-a00ed8abb6c0" message="unexpected error on doc flow"/>
+				</on-error-continue>
+			</error-handler>
+		</try>
+		<logger level="INFO" doc:name="no doc emails in inbox , checking excel emails" doc:id="5c7d8b75-9a44-44f6-a57b-7c54fdd173ae" message="no doc emails in inbox , checking excel emails"/>
+		<try doc:name="Try" doc:id="b8e4fc00-2388-4ea7-aa36-75b3d923f58c" >
+			<flow-ref doc:name="excelFlow" doc:id="56e1b12d-2ca3-4d42-9895-33c52020cd04" name="excelFlow" />
+			<error-handler >
+				<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="ee40b633-02f0-4ae4-8c5d-8ed8cf911bc2" >
+					<logger level="INFO" doc:name="unexpected error on excel flow" doc:id="081d4af3-2674-40d0-bfc5-933aa9355065" message="unexpected error on excel flow"/>
+				</on-error-continue>
+			</error-handler>
+		</try>
 		<error-handler ref="error-handling-app" />
 	</flow>
 	<sub-flow name="excelFlow" doc:id="31df1c01-c82c-454e-9591-d11a58333e79">

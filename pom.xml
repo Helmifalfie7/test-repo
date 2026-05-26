@@ -4,7 +4,7 @@
 
 	<groupId>3407bf92-994a-491e-8681-867155b39e77</groupId>
 	<artifactId>doctopdf-api</artifactId>
-	<version>1.0.2</version>
+	<version>1.0.4</version>
 	<packaging>mule-application</packaging>
 
 	<name>doctopdf-api</name>
