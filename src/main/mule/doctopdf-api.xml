@@ -1137,21 +1137,17 @@ output application/json
 		<logger level="INFO" doc:name="Logger" doc:id="a1c40bae-4310-403d-b1c8-4742d37fe4e7" message="end excel flow"/>
 </sub-flow>
 	<flow name="vmFlow" doc:id="5371331f-6f12-4f2a-9059-50f8ae9d63af" >
-		<vm:consume queueName="executionIDPids" doc:name="Consume executionIDPids" doc:id="40fd5481-31f4-4db8-b81c-a63b969ae811" config-ref="VM_Config"/>
-		<choice doc:name="Choice" doc:id="bcd423ac-8530-48ab-b1b3-790125f4708f" >
-			<when />
-		</choice>
 		<ee:transform doc:name="extractvalueQueue" doc:id="c9136810-164c-46cf-a11d-bc6ac6d368e1" >
 			<ee:message />
 			<ee:variables >
 				<ee:set-variable variableName="vmexecutionID" ><![CDATA[%dw 2.0
 output application/json
 ---
-payload.executionID]]></ee:set-variable>
+vars.IdpMessage.executionID]]></ee:set-variable>
 				<ee:set-variable variableName="vmdocName" ><![CDATA[%dw 2.0
 output application/json
 ---
-payload.docName]]></ee:set-variable>
+vars.IdpMessage.docName]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
 		<try doc:name="Try" doc:id="3be182e5-dcd8-403b-a49a-d4f36527e117" >
@@ -6642,6 +6638,30 @@ output application/json
 		</try>
 		<logger level="INFO" doc:name="Logger" doc:id="6dd138b3-64f4-4ae5-8a08-b4344dbee12a" message="end Vm-flow"/>
 		<error-handler ref="error-handling-app" />
+	</flow>
+	<flow name="doctopdf-apiFlow1" doc:id="24d1c603-3b59-429d-846a-cd7f63153a9c" >
+		<scheduler doc:name="Scheduler" doc:id="a1baa4e3-2149-4bef-abef-1ab675806430" >
+			<scheduling-strategy >
+				<fixed-frequency frequency="1" timeUnit="MINUTES"/>
+			</scheduling-strategy>
+		</scheduler>
+		<try doc:name="Try" doc:id="c7ec16b8-1e44-452b-9e97-fecd6587e75d" >
+			<vm:consume queueName="executionIDPids" doc:name="Consume executionIDPids" doc:id="40fd5481-31f4-4db8-b81c-a63b969ae811" config-ref="VM_Config" target="IdpMessage"/>
+			<error-handler >
+				<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="20f15a7d-42ab-4986-b184-4ea3806855d8" >
+					<logger level="INFO" doc:name="no messages yet from IDP" doc:id="00765c7f-bf16-45a2-bbd5-c475b4e5c6d1" message="no messages yet from IDP"/>
+					<set-variable value='#[""]' doc:name="IdpMessage" doc:id="fd7ddc5f-034a-4580-836c-07d8247bbf23" variableName="IdpMessage"/>
+				</on-error-continue>
+			</error-handler>
+		</try>
+		<choice doc:name="Choice" doc:id="bcd423ac-8530-48ab-b1b3-790125f4708f">
+			<when expression="#[not isEmpty(vars.IdpMessage)]">
+				<flow-ref doc:name="vmFlow" doc:id="e8a3bb30-d018-4b0a-82b2-4f4c3b9211d5" name="vmFlow"/>
+			</when>
+			<otherwise >
+				<logger level="INFO" doc:name="no messages yet in the queue" doc:id="7358105b-83b2-4e2c-a187-6fd67bf731b4" message="no messages yet in the queue"/>
+			</otherwise>
+		</choice>
 	</flow>
 
 </mule>
